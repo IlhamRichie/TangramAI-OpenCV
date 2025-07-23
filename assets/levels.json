@@ -1,0 +1,162 @@
+[
+    {
+        "level": 1,
+        "name": "Ikan",
+        "difficulty": "easy",
+        "imagePath": "assets/target_images/bentuk (1).png",
+        "contourPath": "assets/precomputed_contours/bentuk_1.json",
+        "matchThreshold": 0.1
+    },
+    {
+        "level": 2,
+        "name": "Kelinci",
+        "difficulty": "easy",
+        "imagePath": "assets/target_images/bentuk (2).png",
+        "contourPath": "assets/precomputed_contours/bentuk_2.json",
+        "matchThreshold": 0.15
+    },
+    {
+        "level": 3,
+        "name": "Kucing Duduk",
+        "difficulty": "medium",
+        "imagePath": "assets/target_images/bentuk (3).png",
+        "contourPath": "assets/precomputed_contours/bentuk_3.json",
+        "matchThreshold": 0.2
+    },
+    {
+        "level": 4,
+        "name": "Angsa",
+        "difficulty": "medium",
+        "imagePath": "assets/target_images/bentuk (4).png",
+        "contourPath": "assets/precomputed_contours/bentuk_4.json",
+        "matchThreshold": 0.2
+    },
+    {
+        "level": 5,
+        "name": "Kuda",
+        "difficulty": "medium",
+        "imagePath": "assets/target_images/bentuk (5).png",
+        "contourPath": "assets/precomputed_contours/bentuk_5.json",
+        "matchThreshold": 0.2
+    },
+    {
+        "level": 6,
+        "name": "Kucing Berdiri",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (6).png",
+        "contourPath": "assets/precomputed_contours/bentuk_6.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 7,
+        "name": "Onta",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (7).png",
+        "contourPath": "assets/precomputed_contours/bentuk_7.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 8,
+        "name": "Kucing Santai",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (8).png",
+        "contourPath": "assets/precomputed_contours/bentuk_8.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 9,
+        "name": "Tupai",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (9).png",
+        "contourPath": "assets/precomputed_contours/bentuk_9.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 10,
+        "name": "Kubus",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (10).png",
+        "contourPath": "assets/precomputed_contours/bentuk_10.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 11,
+        "name": "Singa Laut",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (11).png",
+        "contourPath": "assets/precomputed_contours/bentuk_11.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 12,
+        "name": "Segitiga",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (12).png",
+        "contourPath": "assets/precomputed_contours/bentuk_12.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 13,
+        "name": "Poligon",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (13).png",
+        "contourPath": "assets/precomputed_contours/bentuk_13.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 14,
+        "name": "Hexagon",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (14).png",
+        "contourPath": "assets/precomputed_contours/bentuk_14.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 15,
+        "name": "Persegi Panjang",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (15).png",
+        "contourPath": "assets/precomputed_contours/bentuk_15.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 16,
+        "name": "Persegi Bolong",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (16).png",
+        "contourPath": "assets/precomputed_contours/bentuk_16.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 17,
+        "name": "Trapesium",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (17).png",
+        "contourPath": "assets/precomputed_contours/bentuk_17.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 18,
+        "name": "Dua Segitiga",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (18).png",
+        "contourPath": "assets/precomputed_contours/bentuk_18.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 19,
+        "name": "Dua Persegi",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (19).png",
+        "contourPath": "assets/precomputed_contours/bentuk_19.json",
+        "matchThreshold": 0.25
+    },
+    {
+        "level": 20,
+        "name": "Persegi Bolong Besar",
+        "difficulty": "hard",
+        "imagePath": "assets/target_images/bentuk (20).png",
+        "contourPath": "assets/precomputed_contours/bentuk_20.json",
+        "matchThreshold": 0.25
+    }
+]

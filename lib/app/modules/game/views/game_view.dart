@@ -1,5 +1,3 @@
-// File: app/modules/game/views/game_view.dart
-
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -16,17 +14,7 @@ class GameView extends GetView<GameController> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Level ${controller.level.level}: ${controller.level.name}',
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-          overflow: TextOverflow.ellipsis,
-        ),
-        centerTitle: true,
+        // ... (AppBar tetap sama)
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -36,124 +24,90 @@ class GameView extends GetView<GameController> {
             end: Alignment.bottomRight,
           ),
         ),
-        // Menggunakan SingleChildScrollView untuk menghindari overflow
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(), // Agar tidak bisa di-scroll manual
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.of(context).size.height,
-            ),
-            child: SafeArea(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // --- AREA 1: BENTUK TARGET ---
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.3, // 30% tinggi layar
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      child: Image.asset(controller.level.imagePath),
-                    ),
-                  ),
-
-                  // --- AREA 2: PREVIEW KAMERA ---
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.45, // 45% tinggi layar
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 24),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Obx(() {
-                        if (!controller.isCameraInitialized.value) {
-                          return const Center(child: CupertinoActivityIndicator(color: Colors.white));
-                        }
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: AspectRatio(
-                            aspectRatio: controller.cameraController!.value.aspectRatio,
-                            child: CameraPreview(controller.cameraController!),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-
-                  // --- AREA 3: KONTROL & TIMER (KODE YANG HILANG) ---
-                  SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.15, // 15% tinggi layar
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      // ### AWAL DARI KODE YANG HILANG ###
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Tampilan Timer
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'WAKTU',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              Obx(() => Text(
-                                    controller.formattedTime.value,
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 42,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )),
-                            ],
-                          ),
-                          
-                          // Tombol Scan yang Reaktif
-                          Obx(
-                            () => SizedBox(
-                              width: 150,
-                              height: 60,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xff2c3e50),
-                                  disabledBackgroundColor: Colors.grey.shade300,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                                onPressed: controller.isProcessing.value
-                                    ? null
-                                    : () => controller.scanPuzzle(),
-                                icon: controller.isProcessing.value
-                                    ? const CupertinoActivityIndicator(
-                                        color: Color(0xff2c3e50),
-                                      )
-                                    : const Icon(CupertinoIcons.camera_viewfinder,
-                                        size: 28),
-                                label: Text(
-                                  controller.isProcessing.value ? 'Proses...' : 'Scan',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      // ### AKHIR DARI KODE YANG HILANG ###
-                    ),
-                  ),
-                ],
+        child: SafeArea(
+          child: Column(
+            children: [
+              // --- AREA 1: BENTUK TARGET ---
+              Expanded(
+                flex: 3,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  child: Image.asset(controller.level.imagePath),
+                ),
               ),
-            ),
+
+              // --- AREA 2: PREVIEW KAMERA DENGAN FEEDBACK ---
+              Expanded(
+                flex: 5,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 24),
+                  // Gunakan Stack untuk menumpuk border di atas preview kamera
+                  child: Obx(() {
+                    // Tentukan warna border berdasarkan tingkat kemiripan
+                    Color borderColor = Colors.red.withOpacity(0.7);
+                    if (controller.currentSimilarity.value < (controller.level.matchThreshold * 2)) {
+                      borderColor = Colors.yellow.withOpacity(0.7);
+                    }
+                    if (controller.currentSimilarity.value < controller.level.matchThreshold) {
+                      borderColor = Colors.green.withOpacity(0.7);
+                    }
+
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Preview Kamera
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: controller.isCameraInitialized.value
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: CameraPreview(controller.cameraController!),
+                                )
+                              : const Center(child: CupertinoActivityIndicator(color: Colors.white)),
+                        ),
+                        // Border Feedback Animasi
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: borderColor, width: 6),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+
+              // --- AREA 3: TIMER (TANPA TOMBOL SCAN) ---
+              Expanded(
+                flex: 2,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'WAKTU',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    Obx(() => Text(
+                          controller.formattedTime.value,
+                          style: GoogleFonts.montserrat(
+                            fontSize: 52, // Perbesar ukuran timer
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

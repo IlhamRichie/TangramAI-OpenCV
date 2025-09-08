@@ -1,124 +1,145 @@
 import 'dart:async';
-import 'dart:typed_data'; // Untuk Uint8List
+import 'dart:typed_data';
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart'; // Untuk dialog
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
-
 
 import '../../../data/models/level_model.dart';
 import '../../../data/services/contour_loader.dart';
-import '../../../routes/app_pages.dart'; //
+import '../../../routes/app_pages.dart';
 
 class GameController extends GetxController {
+  // --- State Utama Game ---
   late Level level;
   Timer? _timer;
   final RxInt elapsedTime = 0.obs;
   final RxString formattedTime = '00:00'.obs;
-  final RxBool isProcessing = false.obs;
-
-  // --- Variabel Baru untuk Kamera ---
+  
+  // --- State Kamera & Pemrosesan Real-time ---
   CameraController? cameraController;
   final RxBool isCameraInitialized = false.obs;
-  
+  bool _isProcessingFrame = false;
+  int _consecutiveMatches = 0;
+  final int _requiredMatches = 5;
+
+  // --- State untuk Umpan Balik Visual ---
+  final RxDouble currentSimilarity = 1.0.obs;
+
   @override
   void onInit() {
     super.onInit();
     level = Get.arguments as Level;
-    _initializeCamera(); // Inisialisasi kamera
+    _initializeCamera();
     startTimer();
   }
 
   @override
   void onClose() {
     _timer?.cancel();
-    cameraController?.dispose(); // WAJIB: Lepaskan kamera saat halaman ditutup
+    cameraController?.stopImageStream();
+    cameraController?.dispose();
     super.onClose();
   }
 
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
-      final firstCamera = cameras.first; // Biasanya kamera belakang
+      final backCamera = cameras.firstWhere(
+          (cam) => cam.lensDirection == CameraLensDirection.back,
+          orElse: () => cameras.first);
 
       cameraController = CameraController(
-        firstCamera,
-        ResolutionPreset.high, // Gunakan resolusi tinggi untuk akurasi
+        backCamera,
+        ResolutionPreset.medium,
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
       );
 
       await cameraController!.initialize();
       isCameraInitialized.value = true;
+
+      cameraController!.startImageStream((image) {
+        if (!_isProcessingFrame) {
+          _isProcessingFrame = true;
+          _processCameraImage(image);
+        }
+      });
     } catch (e) {
       print("Error initializing camera: $e");
       Get.snackbar('Error Kamera', 'Tidak dapat mengakses kamera.');
     }
   }
 
-  Future<void> scanPuzzle() async {
-    if (isProcessing.value || !isCameraInitialized.value) return;
-
+  Future<void> _processCameraImage(CameraImage image) async {
     try {
-      isProcessing.value = true;
-      Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
-      
-      // Ambil gambar dari controller kamera, bukan image_picker lagi
-      final XFile imageFile = await cameraController!.takePicture();
-      
-      final imageBytes = await imageFile.readAsBytes();
       final masterContour = await ContourLoaderService.loadContourFromFile(level.contourPath);
-
       if (masterContour.isEmpty) throw Exception("Kontur master gagal dimuat.");
       
-      final userContour = _processImageToGetContour(imageBytes);
-
-      if (userContour.isEmpty) throw Exception("Bentuk tidak terdeteksi pada gambar.");
+      // --- PERBAIKAN UTAMA: Konversi YUV ke Grayscale secara manual ---
+      final cv.Mat grayImg = _convertYUVtoGrayscale(image);
       
-      final double similarity = cv.matchShapes(masterContour, userContour, cv.CONTOURS_MATCH_I1, 0);
-      print("Similarity Score: $similarity (Target: < ${level.matchThreshold})");
+      // Rotasi 90 derajat karena stream kamera Android biasanya lanskap
+      final rotatedImg = cv.rotate(grayImg, cv.ROTATE_90_CLOCKWISE);
       
-      Get.back();
+      final (_, thresh) = cv.threshold(rotatedImg, 127, 255, cv.THRESH_BINARY_INV);
+      final (contours, _) = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-      if (similarity < level.matchThreshold) {
-        stopTimer();
-        Get.toNamed(Routes.RESULT, arguments: {'level': level, 'time': elapsedTime.value});
+      if (contours.isNotEmpty) {
+        final userContour = contours.reduce((a, b) => cv.contourArea(a) > cv.contourArea(b) ? a : b);
+        final double similarity = cv.matchShapes(masterContour, userContour, cv.CONTOURS_MATCH_I1, 0);
+        currentSimilarity.value = similarity;
+
+        if (similarity < level.matchThreshold) {
+          _consecutiveMatches++;
+          if (_consecutiveMatches >= _requiredMatches) {
+            stopTimer();
+            await cameraController?.stopImageStream();
+            Get.offNamed(Routes.RESULT, arguments: {'level': level, 'time': elapsedTime.value});
+          }
+        } else {
+          _consecutiveMatches = 0;
+        }
       } else {
-        Get.snackbar('Coba Lagi!', 'Bentuknya belum mirip, perbaiki susunanmu.',
-            snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+        currentSimilarity.value = 1.0;
+        _consecutiveMatches = 0;
       }
     } catch (e) {
-      Get.back();
-      print("Error during puzzle scan: $e");
-      Get.snackbar('Error', 'Terjadi kesalahan saat memproses gambar.');
+      print("Error processing frame: $e");
     } finally {
-      isProcessing.value = false;
+      await Future.delayed(const Duration(milliseconds: 300));
+      _isProcessingFrame = false;
     }
   }
 
-  cv.VecPoint _processImageToGetContour(Uint8List imageBytes) {
-    final img = cv.imdecode(imageBytes, cv.IMREAD_COLOR);
-    final grayImg = cv.cvtColor(img, cv.COLOR_BGR2GRAY);
-    
-    // --- PERBAIKAN BUG TIPE DATA ---
-    final (_, thresh) = cv.threshold(grayImg, 127, 255, cv.THRESH_BINARY_INV);
-    
-    final (contours, _) = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    if (contours.isEmpty) return cv.VecPoint.fromList([]);
-    return contours.reduce((a, b) => cv.contourArea(a) > cv.contourArea(b) ? a : b);
+  /// Fungsi helper untuk mengonversi format YUV420 dari CameraImage ke Grayscale Mat
+  cv.Mat _convertYUVtoGrayscale(CameraImage image) {
+    // Plane 0 adalah Y (Luminance), yang pada dasarnya adalah representasi grayscale dari gambar.
+    // Kita bisa langsung menggunakan plane ini untuk efisiensi.
+    final yPlane = image.planes[0];
+    final img = cv.Mat.fromList(
+      image.height,
+      yPlane.bytesPerRow, // Gunakan bytesPerRow untuk lebar yang benar
+      cv.MatType.CV_8UC1, // 8-bit unsigned, 1 channel (grayscale)
+      yPlane.bytes,
+    );
+    // Jika lebarnya tidak sama (karena padding), kita perlu crop.
+    if (yPlane.bytesPerRow != image.width){
+      return img.colRange(0, image.width);
+    }
+    return img;
   }
 
   void startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      elapsedTime.value++; // Tambah detik
-      _updateFormattedTime(); // Perbarui teks waktu
+      elapsedTime.value++;
+      _updateFormattedTime();
     });
   }
 
   void _updateFormattedTime() {
-    final int minutes = elapsedTime.value ~/ 60; // Dapatkan menit
-    final int seconds = elapsedTime.value % 60; // Dapatkan sisa detik
+    final int minutes = elapsedTime.value ~/ 60;
+    final int seconds = elapsedTime.value % 60;
     formattedTime.value =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }

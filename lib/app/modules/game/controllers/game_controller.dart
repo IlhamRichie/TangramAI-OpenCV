@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:opencv_dart/opencv_dart.dart' as cv;
 
@@ -15,7 +14,7 @@ class GameController extends GetxController {
   Timer? _timer;
   final RxInt elapsedTime = 0.obs;
   final RxString formattedTime = '00:00'.obs;
-  
+
   // --- State Kamera & Pemrosesan Real-time ---
   CameraController? cameraController;
   final RxBool isCameraInitialized = false.obs;
@@ -73,21 +72,42 @@ class GameController extends GetxController {
 
   Future<void> _processCameraImage(CameraImage image) async {
     try {
-      final masterContour = await ContourLoaderService.loadContourFromFile(level.contourPath);
+      final masterContour =
+          await ContourLoaderService.loadContourFromFile(level.contourPath);
       if (masterContour.isEmpty) throw Exception("Kontur master gagal dimuat.");
-      
-      // --- PERBAIKAN UTAMA: Konversi YUV ke Grayscale secara manual ---
-      final cv.Mat grayImg = _convertYUVtoGrayscale(image);
-      
-      // Rotasi 90 derajat karena stream kamera Android biasanya lanskap
+
+      final grayImg = _convertYUVtoGrayscale(image); // Fungsi ini tetap sama
+
+      // Lakukan rotasi
       final rotatedImg = cv.rotate(grayImg, cv.ROTATE_90_CLOCKWISE);
-      
-      final (_, thresh) = cv.threshold(rotatedImg, 127, 255, cv.THRESH_BINARY_INV);
-      final (contours, _) = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+      // --- PERUBAHAN LOGIKA DETEKSI DIMULAI DI SINI ---
+      // Konversi gambar yang sudah dirotasi ke BGR, lalu ke HSV
+      final bgrImg = cv.cvtColor(rotatedImg, cv.COLOR_GRAY2BGR);
+      final hsvImg = cv.cvtColor(bgrImg, cv.COLOR_BGR2HSV);
+
+      // Tentukan rentang warna kayu/cokelat dalam HSV
+      // Nilai ini mungkin perlu Anda sesuaikan
+      final lowerBrown =
+          cv.Mat.fromList(1, 3, cv.MatType.CV_8UC1, [10, 100, 20]);
+      final upperBrown =
+          cv.Mat.fromList(1, 3, cv.MatType.CV_8UC1, [25, 255, 255]);
+
+      // Buat masker berdasarkan rentang warna
+      final mask = cv.inRange(hsvImg, lowerBrown, upperBrown);
+
+      // (Opsional) Bersihkan noise pada mask
+      final kernel = cv.getStructuringElement(cv.MORPH_RECT, (5, 5));
+      final cleanedMask = cv.morphologyEx(mask, cv.MORPH_OPEN, kernel);
+
+      final (contours, _) = cv.findContours(
+          cleanedMask, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
       if (contours.isNotEmpty) {
-        final userContour = contours.reduce((a, b) => cv.contourArea(a) > cv.contourArea(b) ? a : b);
-        final double similarity = cv.matchShapes(masterContour, userContour, cv.CONTOURS_MATCH_I1, 0);
+        final userContour = contours
+            .reduce((a, b) => cv.contourArea(a) > cv.contourArea(b) ? a : b);
+        final double similarity =
+            cv.matchShapes(masterContour, userContour, cv.CONTOURS_MATCH_I1, 0);
         currentSimilarity.value = similarity;
 
         if (similarity < level.matchThreshold) {
@@ -95,7 +115,8 @@ class GameController extends GetxController {
           if (_consecutiveMatches >= _requiredMatches) {
             stopTimer();
             await cameraController?.stopImageStream();
-            Get.offNamed(Routes.RESULT, arguments: {'level': level, 'time': elapsedTime.value});
+            Get.offNamed(Routes.RESULT,
+                arguments: {'level': level, 'time': elapsedTime.value});
           }
         } else {
           _consecutiveMatches = 0;
@@ -124,7 +145,7 @@ class GameController extends GetxController {
       yPlane.bytes,
     );
     // Jika lebarnya tidak sama (karena padding), kita perlu crop.
-    if (yPlane.bytesPerRow != image.width){
+    if (yPlane.bytesPerRow != image.width) {
       return img.colRange(0, image.width);
     }
     return img;

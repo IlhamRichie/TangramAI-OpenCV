@@ -28,7 +28,7 @@ def process_all_levels():
         # --- BAGIAN YANG DIPERBAIKI ---
 
         # 1. Baca gambar sebagai gambar berwarna biasa.
-        img = cv2.imread(image_path, cv2.IMREAD_COLOR)
+        img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
         if img is None:
             print(f"  [WARNING] Gambar tidak ditemukan di path: {image_path}")
@@ -36,14 +36,15 @@ def process_all_levels():
 
         # 2. Konversi ke Grayscale.
         # Kita bekerja dengan intensitas warna, bukan warna itu sendiri.
-        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        alpha_channel = img[:, :, 3]
 
         # 3. Thresholding dengan INVERT.
         # Ini adalah kunci perbaikannya.
         # Objek kita hitam (<127) dan background putih (>127).
         # THRESH_BINARY_INV akan mengubah objek hitam menjadi PUTIH dan background putih menjadi HITAM.
         # findContours bekerja dengan mendeteksi objek PUTIH.
-        _ , thresh = cv2.threshold(gray_img, 127, 255, cv2.THRESH_BINARY_INV)
+        _ , thresh = cv2.threshold(alpha_channel, 1, 255, cv2.THRESH_BINARY)
+
         
         # --- AKHIR BAGIAN YANG DIPERBAIKI ---
 
